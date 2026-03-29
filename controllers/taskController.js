@@ -1,6 +1,6 @@
 const Task = require("../models/tasksModel");
 
-// Create a task
+// =================== CREATE TASK ===================
 exports.createTask = async (req, res) => {
   try {
     const { title, description, priority } = req.body;
@@ -16,37 +16,45 @@ exports.createTask = async (req, res) => {
     res.status(201).json({ message: "Task created", task });
   } catch (error) {
     console.error("Create task error:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to create task", error: error.message });
+    res.status(500).json({
+      message: "Failed to create task",
+      error: error.message,
+    });
   }
 };
 
-
-// Get all tasks for the logged-in user
+// =================== GET ALL TASKS (WITH PAGINATION + COUNTS) ===================
 exports.getTasks = async (req, res) => {
   try {
     const { page = 1, status, completed, priority } = req.query;
 
     const query = { user: req.user._id };
 
-    // 🔹 Filters
+    // Filters
     if (status !== undefined) query.status = Number(status);
     if (completed !== undefined) query.completed = completed === "true";
     if (priority) query.priority = priority;
 
-    // 🔹 Pagination (FIXED LIMIT = 10)
     const pageNumber = Number(page) || 1;
-    const limit = 10; // FIXED
-
+    const limit = 10;
     const skip = (pageNumber - 1) * limit;
 
-    // 🔹 Total tasks
+    // Total (filtered)
     const total = await Task.countDocuments(query);
 
-    // 🔹 Fetch tasks
+    // Global counts (not affected by pagination)
+    const completedCount = await Task.countDocuments({
+      user: req.user._id,
+      status: 100,
+    });
+
+    const ongoingCount = await Task.countDocuments({
+      user: req.user._id,
+      status: { $lt: 100 },
+    });
+
     const tasks = await Task.find(query)
-      .sort({ createdAt: -1 }) // latest first
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -55,6 +63,8 @@ exports.getTasks = async (req, res) => {
       page: pageNumber,
       pages: Math.ceil(total / limit),
       total,
+      completedCount,
+      ongoingCount,
       count: tasks.length,
       hasNextPage: pageNumber < Math.ceil(total / limit),
       hasPrevPage: pageNumber > 1,
@@ -69,30 +79,67 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// Mark task as complete
+// =================== GET COMPLETED TASKS ===================
+exports.getCompletedTasks = async (req, res) => {
+  try {
+    const tasks = await Task.find({
+      user: req.user._id,
+      status: 100,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      total: tasks.length,
+      data: tasks,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch completed tasks",
+      error: error.message,
+    });
+  }
+};
+
+// =================== COMPLETE TASK ===================
 exports.completeTask = async (req, res) => {
   try {
-    const task = await Task.findOne({ _id: req.params.id, user: req.user._id });
-    if (!task) return res.status(404).json({ message: "Task not found" });
+    const task = await Task.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     task.status = 100;
     await task.save();
 
-    res.status(200).json({ message: "Task marked as complete", task });
+    res.status(200).json({
+      message: "Task marked as complete",
+      task,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to complete task", error: error.message });
+    res.status(500).json({
+      message: "Failed to complete task",
+      error: error.message,
+    });
   }
 };
 
-// Update a task
+// =================== UPDATE TASK ===================
 exports.updateTask = async (req, res) => {
   try {
     const { title, description, priority, status } = req.body;
 
-    const task = await Task.findOne({ _id: req.params.id, user: req.user._id });
-    if (!task) return res.status(404).json({ message: "Task not found" });
+    const task = await Task.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
 
     if (title) task.title = title;
     if (description) task.description = description;
@@ -101,27 +148,39 @@ exports.updateTask = async (req, res) => {
     if (req.file?.cloudinaryUrl) task.image = req.file.cloudinaryUrl;
 
     await task.save();
-    res.status(200).json({ message: "Task updated", task });
+
+    res.status(200).json({
+      message: "Task updated",
+      task,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to update task", error: error.message });
+    res.status(500).json({
+      message: "Failed to update task",
+      error: error.message,
+    });
   }
 };
 
-// Delete a task
+// =================== DELETE TASK ===================
 exports.deleteTask = async (req, res) => {
   try {
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
       user: req.user._id,
     });
-    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    res.status(200).json({ message: "Task deleted", task });
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.status(200).json({
+      message: "Task deleted",
+      task,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete task", error: error.message });
+    res.status(500).json({
+      message: "Failed to delete task",
+      error: error.message,
+    });
   }
 };

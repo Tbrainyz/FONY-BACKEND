@@ -8,10 +8,13 @@ const {
   updateTask,
   completeTask,
   deleteTask,
+  getCompletedTasks,
 } = require("../controllers/taskController");
 
 // Get all tasks
 router.get("/", protect, getTasks);
+// Get completed tasks
+router.get("/completed", protect, getCompletedTasks);
 
 // Create task with optional image
 router.post("/", protect, upload, createTask);
