@@ -40,7 +40,7 @@ exports.getTasks = async (req, res) => {
     const skip = (pageNumber - 1) * limit;
 
     // Total (filtered)
-    const total = await Task.countDocuments(query);
+    const totalTasks = await Task.countDocuments(query);
 
     // Global counts (not affected by pagination)
     const completedCount = await Task.countDocuments({
@@ -61,12 +61,12 @@ exports.getTasks = async (req, res) => {
     res.status(200).json({
       success: true,
       page: pageNumber,
-      pages: Math.ceil(total / limit),
-      total,
+      pages: Math.ceil(totalTasks / limit),
+      totalTasks,
       completedCount,
       ongoingCount,
       count: tasks.length,
-      hasNextPage: pageNumber < Math.ceil(total / limit),
+      hasNextPage: pageNumber < Math.ceil(totalTasks / limit),
       hasPrevPage: pageNumber > 1,
       data: tasks,
     });
