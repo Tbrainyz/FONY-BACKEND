@@ -120,6 +120,36 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+// ================= RESEND OTP =================
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOTP();
+
+    user.resetPasswordToken = otp;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+
+    await user.save();
+
+    await sendEmail(
+      email,
+      "Resend Password OTP",
+      `
+        <h2>Your new OTP</h2>
+        <h1>${otp}</h1>
+      `
+    );
+
+    res.status(200).json({ message: "OTP resent successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // ================= GOOGLE AUTH =================
 
 exports.googleAuth = async (req, res) => {
