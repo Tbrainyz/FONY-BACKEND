@@ -33,34 +33,29 @@ exports.getTasks = async (req, res) => {
 
     const query = { user: req.user._id };
 
-    // ✅ FILTER
+    // ✅ FIX: normalize priority
     if (priority) {
-      query.priority = priority;
+      query.priority = priority.toLowerCase();
     }
 
     const pageNumber = Number(page) || 1;
     const limit = 10;
     const skip = (pageNumber - 1) * limit;
 
-    // ✅ TOTAL FOR PAGINATION (FILTERED)
-    const total = await Task.countDocuments(query);
+    // ✅ TOTAL (FILTERED)
+    const totalTasks = await Task.countDocuments(query);
 
-    // ✅ GLOBAL STATS (NOT FILTERED)
-    const totalTasks = await Task.countDocuments({
-      user: req.user._id,
-    });
-
-    const completedTasks = await Task.countDocuments({
+    // ✅ GLOBAL COUNTS (NOT FILTERED)
+    const completedCount = await Task.countDocuments({
       user: req.user._id,
       status: 100,
     });
 
-    const ongoingTasks = await Task.countDocuments({
+    const ongoingCount = await Task.countDocuments({
       user: req.user._id,
       status: { $lt: 100 },
     });
 
-    // ✅ TASKS
     const tasks = await Task.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -68,27 +63,18 @@ exports.getTasks = async (req, res) => {
 
     res.status(200).json({
       success: true,
-
-      // ✅ PAGINATION
       page: pageNumber,
-      pages: Math.ceil(total / limit),
-      total,
-      count: tasks.length,
-      hasNextPage: pageNumber < Math.ceil(total / limit),
-      hasPrevPage: pageNumber > 1,
+      pages: Math.ceil(totalTasks / limit),
 
-      // ✅ DATA
+      totalTasks,
+      completedCount,
+      ongoingCount,
+
       data: tasks,
-
-      // ✅ GLOBAL SUMMARY
-      stats: {
-        totalTasks,
-        completedTasks,
-        ongoingTasks,
-      },
+      hasNextPage: pageNumber < Math.ceil(totalTasks / limit),
+      hasPrevPage: pageNumber > 1,
     });
   } catch (error) {
-    console.error(error);
     res.status(500).json({
       message: "Failed to fetch tasks",
       error: error.message,
