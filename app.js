@@ -18,21 +18,23 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // allow requests with no origin (like curl, mobile apps)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+// ✅ Handle preflight requests explicitly
+app.options("*", cors());
 
 app.use(express.json());
 
-// ✅ Error handler
+// ✅ Routes
+app.use("/api/users", userRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/admin", adminRoutes);
+
+// ✅ Error handler (keep last so CORS headers are already set)
 app.use((err, req, res, next) => {
   console.error("🔥 FULL ERROR:", err);
   res.status(500).json({
@@ -40,11 +42,6 @@ app.use((err, req, res, next) => {
     error: err,
   });
 });
-
-// ✅ Routes
-app.use("/api/users", userRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/admin", adminRoutes);
 
 // ✅ Start server
 const startServer = async () => {
