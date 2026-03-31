@@ -25,6 +25,15 @@ app.use((err, req, res, next) => {
   });
 });
 
+const cors = require("cors");
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
