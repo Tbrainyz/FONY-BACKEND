@@ -29,8 +29,8 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// ✅ Handle preflight requests explicitly
-app.options("*", cors());
+// ❌ Remove this line completely:
+// app.options("*", cors());
 
 app.use(express.json());
 
@@ -52,12 +52,11 @@ app.get("/api/auth/google",
 app.get("/api/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),
   (req, res) => {
-    // Successful login
     res.json({ message: "Google login successful", user: req.user });
   }
 );
 
-// ✅ Error handler (keep last so CORS headers are already set)
+// ✅ Error handler
 app.use((err, req, res, next) => {
   console.error("🔥 FULL ERROR:", err);
   res.status(500).json({

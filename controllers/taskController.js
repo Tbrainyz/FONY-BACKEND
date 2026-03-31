@@ -30,10 +30,8 @@ exports.createTask = async (req, res) => {
 exports.getTasks = async (req, res) => {
   try {
     const { page = 1, priority } = req.query;
-
     const query = { user: req.user._id };
 
-    // ✅ FIX: normalize priority
     if (priority) {
       query.priority = priority.toLowerCase();
     }
@@ -42,10 +40,8 @@ exports.getTasks = async (req, res) => {
     const limit = 10;
     const skip = (pageNumber - 1) * limit;
 
-    // ✅ TOTAL (FILTERED)
     const totalTasks = await Task.countDocuments(query);
 
-    // ✅ GLOBAL COUNTS (NOT FILTERED)
     const completedCount = await Task.countDocuments({
       user: req.user._id,
       status: 100,
@@ -65,11 +61,9 @@ exports.getTasks = async (req, res) => {
       success: true,
       page: pageNumber,
       pages: Math.ceil(totalTasks / limit),
-
       totalTasks,
       completedCount,
       ongoingCount,
-
       data: tasks,
       hasNextPage: pageNumber < Math.ceil(totalTasks / limit),
       hasPrevPage: pageNumber > 1,
@@ -77,6 +71,27 @@ exports.getTasks = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch tasks",
+      error: error.message,
+    });
+  }
+};
+
+// =================== GET COMPLETED TASKS ===================
+exports.getCompletedTasks = async (req, res) => {
+  try {
+    const tasks = await Task.find({
+      user: req.user._id,
+      status: 100,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      total: tasks.length,
+      data: tasks,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch completed tasks",
       error: error.message,
     });
   }
