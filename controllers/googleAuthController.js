@@ -4,7 +4,6 @@ const User = require("../models/usersModel");
 
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET
 );
 
 exports.googleAuth = async (req, res) => {
