@@ -12,8 +12,8 @@ const taskSchema = new mongoose.Schema(
     },
     priority: {
       type: String,
-      enum: ["Low", "Medium", "High"],
-      default: "Low",
+      enum: ["low", "medium", "high"],
+      default: "low",
     },
     image: {
       type: String, // stores Cloudinary URL
