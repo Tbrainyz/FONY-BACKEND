@@ -17,7 +17,13 @@ exports.registerUser = async (req, res) => {
     if (userExists) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, phone, password: hashedPassword, isVerified: true });
+    const user = await User.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      isVerified: true,
+    });
 
     res.status(201).json({ message: "User registered successfully", user });
   } catch (error) {
@@ -39,6 +45,44 @@ exports.loginUser = async (req, res) => {
     res.status(200).json({ token, user });
   } catch (error) {
     res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+// ================= GOOGLE AUTH =================
+exports.googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: "No token provided" });
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub } = payload;
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        googleId: sub,
+        profilePicture: picture,
+        isVerified: true,
+      });
+    } else if (!user.googleId) {
+      // Link Google account to existing manual account
+      user.googleId = sub;
+      if (picture) user.profilePicture = picture;
+      await user.save();
+    }
+
+    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.json({ success: true, token: jwtToken, user });
+  } catch (error) {
+    res.status(500).json({ message: "Google authentication failed", error: error.message });
   }
 };
 
@@ -98,38 +142,6 @@ exports.resendOTP = async (req, res) => {
     res.status(200).json({ message: "OTP resent successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
-  }
-};
-
-// ================= GOOGLE AUTH (SECURE) =================
-exports.googleAuth = async (req, res) => {
-  try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ message: "No token provided" });
-
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { email, name, picture, sub } = payload;
-
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = await User.create({
-        name,
-        email,
-        googleId: sub,
-        profilePicture: picture,
-        isVerified: true,
-      });
-    }
-
-    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.json({ success: true, token: jwtToken, user });
-  } catch (error) {
-    res.status(500).json({ message: "Google authentication failed", error: error.message });
   }
 };
 

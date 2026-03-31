@@ -3,6 +3,11 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const session = require("express-session");
+const passport = require("passport");
+
+// Load passport config (Google strategy)
+require("./config/passport");
 
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
@@ -29,10 +34,28 @@ app.options("*", cors());
 
 app.use(express.json());
 
+// ✅ Session + Passport
+app.use(session({ secret: "secretKey", resave: false, saveUninitialized: false }));
+app.use(passport.initialize());
+app.use(passport.session());
+
 // ✅ Routes
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
+
+// ✅ Google OAuth routes
+app.get("/api/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get("/api/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  (req, res) => {
+    // Successful login
+    res.json({ message: "Google login successful", user: req.user });
+  }
+);
 
 // ✅ Error handler (keep last so CORS headers are already set)
 app.use((err, req, res, next) => {
