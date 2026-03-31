@@ -56,11 +56,19 @@ exports.getCompletedTasks = async (req, res) => {
 exports.createTask = async (req, res) => {
   try {
     const { title, description, priority, status } = req.body;
+    if (!title || !description || !priority) {
+      return res.status(400).json({ message: "All required fields must be filled" });
+    }
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized: user not found" });
+    }
+
     const newTask = new Task({
       title,
       description,
       priority,
-      status: status !== undefined ? Number(status) : 0, // default 0
+      status: status !== undefined ? Number(status) : 0,
       user: req.user._id,
     });
 
@@ -69,9 +77,11 @@ exports.createTask = async (req, res) => {
     await newTask.save();
     res.status(201).json({ message: "Task created successfully", task: newTask });
   } catch (err) {
+    console.error("Create task error:", err); // ✅ log full error
     res.status(500).json({ message: "Error creating task", error: err.message });
   }
 };
+
 
 // UPDATE task
 exports.updateTask = async (req, res) => {
