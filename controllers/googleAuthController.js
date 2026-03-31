@@ -2,7 +2,10 @@ const { OAuth2Client } = require("google-auth-library");
 const jwt = require("jsonwebtoken");
 const User = require("../models/usersModel");
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+const client = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
 
 exports.googleAuth = async (req, res) => {
   try {
@@ -12,19 +15,17 @@ exports.googleAuth = async (req, res) => {
       return res.status(400).json({ message: "No token provided" });
     }
 
-    // 🔐 Verify Google token
+    // 🔐 Verify Google ID token
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
-      secret: process.env.GOOGLE_CLIENT_SECRET,
     });
 
     const payload = ticket.getPayload();
-
     const { email, name, picture, sub } = payload;
 
+    // 🔎 Find or create user
     let user = await User.findOne({ email });
-
     if (!user) {
       user = await User.create({
         name,
@@ -35,7 +36,7 @@ exports.googleAuth = async (req, res) => {
       });
     }
 
-    // 🔑 Create JWT
+    // 🔑 Create JWT for your app
     const jwtToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET,
