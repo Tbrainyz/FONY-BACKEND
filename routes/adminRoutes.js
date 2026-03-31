@@ -1,7 +1,5 @@
+// routes/adminRoutes.js
 const express = require("express");
-const protect = require("../middlewares/authMiddleware");
-const admin = require("../middlewares/adminMiddleware");
-
 const {
   getAllUsers,
   makeAdmin,
@@ -10,21 +8,18 @@ const {
   getAllTasks,
   getUserTasks,
   getDashboard,
+  getUsers,
 } = require("../controllers/adminController");
 
 const router = express.Router();
 
-// USERS
-router.get("/users", protect, admin, getAllUsers);
-router.put("/make-admin/:id", protect, admin, makeAdmin);
-router.put("/block/:id", protect, admin, blockUser);
-router.put("/unblock/:id", protect, admin, unblockUser);
-
-// TASKS
-router.get("/tasks", protect, admin, getAllTasks);
-router.get("/tasks/user/:userId", protect, admin, getUserTasks);
-
-// DASHBOARD
-router.get("/dashboard", protect, admin, getDashboard);
+router.get("/users", getUsers);          // paginated users with task counts
+router.get("/dashboard", getDashboard);  // summary stats
+router.get("/all-users", getAllUsers);   // raw all users
+router.get("/tasks", getAllTasks);
+router.get("/tasks/:userId", getUserTasks);
+router.put("/make-admin/:id", makeAdmin);
+router.put("/block/:id", blockUser);
+router.put("/unblock/:id", unblockUser);
 
 module.exports = router;
