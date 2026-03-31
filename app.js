@@ -11,15 +11,15 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 
-// ✅ Configure CORS properly
+// ✅ Explicit CORS configuration
 const allowedOrigins = [
-  "http://localhost:5173",          // React dev server
+  "http://localhost:5173",           // React dev server
   "https://your-frontend-domain.com" // add your deployed frontend here
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl, etc.)
+    // allow requests with no origin (like curl, mobile apps)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
