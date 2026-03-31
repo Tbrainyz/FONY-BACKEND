@@ -78,8 +78,8 @@ exports.getDashboard = async (req, res) => {
   try {
     const usersCount = await User.countDocuments();
     const tasksCount = await Task.countDocuments();
-    const completedCount = await Task.countDocuments({ completed: true });
-    const ongoingCount = await Task.countDocuments({ completed: false });
+    const completedCount = await Task.countDocuments({ status: "completed" });
+    const ongoingCount = await Task.countDocuments({ status: "ongoing" });
 
     res.json({ usersCount, tasksCount, completedCount, ongoingCount });
   } catch (err) {
@@ -102,7 +102,7 @@ exports.getUsers = async (req, res) => {
     const usersWithTasks = await Promise.all(
       users.map(async (user) => {
         const totalTasks = await Task.countDocuments({ user: user._id });
-        const completedTasks = await Task.countDocuments({ user: user._id, completed: true });
+        const completedTasks = await Task.countDocuments({ user: user._id, status: "completed" });
         return { ...user.toObject(), totalTasks, completedTasks };
       })
     );
