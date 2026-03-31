@@ -13,7 +13,6 @@ const {
 
 // Get all tasks
 router.get("/", protect, getTasks);
-
 // Get completed tasks
 router.get("/completed", protect, getCompletedTasks);
 
