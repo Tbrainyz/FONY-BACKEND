@@ -29,7 +29,7 @@ const cors = require("cors");
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://fony-backend.onrender.com"],
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
