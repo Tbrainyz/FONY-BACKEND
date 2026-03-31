@@ -43,6 +43,10 @@ app.use(passport.session());
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
+const path = require("path");
+
+// Serve uploaded images
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ Google OAuth routes
 app.get("/api/auth/google",
