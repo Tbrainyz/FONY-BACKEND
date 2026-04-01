@@ -49,16 +49,16 @@ const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ Google OAuth routes
-app.get("/api/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// app.get("/api/auth/google",
+//   passport.authenticate("google", { scope: ["profile", "email"] })
+// );
 
-app.get("/api/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  (req, res) => {
-    res.json({ message: "Google login successful", user: req.user });
-  }
-);
+// app.get("/api/auth/google/callback",
+//   passport.authenticate("google", { failureRedirect: "/login" }),
+//   (req, res) => {
+//     res.json({ message: "Google login successful", user: req.user });
+//   }
+// );
 
 // ✅ Error handler
 app.use((err, req, res, next) => {
@@ -68,6 +68,7 @@ app.use((err, req, res, next) => {
     error: err,
   });
 });
+
 
 // ✅ Start server
 const startServer = async () => {

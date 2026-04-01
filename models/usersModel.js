@@ -7,12 +7,12 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-     role: {
+    role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
-    
+
     isBlocked: {
       type: Boolean,
       default: false,
@@ -42,6 +42,7 @@ const userSchema = new mongoose.Schema(
     // ✅ Google Auth
     googleId: {
       type: String,
+      index: true,
     },
 
     // ✅ Account verification

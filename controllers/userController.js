@@ -1,20 +1,20 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/usersModel");
 const { sendEmail } = require("../services/emailService");
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const passport = require("../config/passport");
 
 // Utility: OTP Generator
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
 // ================= REGISTER =================
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
     const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: "User already exists" });
+    if (userExists)
+      return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
@@ -39,9 +39,12 @@ exports.loginUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
     res.status(200).json({ token, user });
   } catch (error) {
     res.status(500).json({ message: error.message || "Server error" });
@@ -49,42 +52,22 @@ exports.loginUser = async (req, res) => {
 };
 
 // ================= GOOGLE AUTH =================
-exports.googleAuth = async (req, res) => {
-  try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ message: "No token provided" });
+exports.googleAuth = passport.authenticate("google", {
+  scope: ["profile", "email"],
+  session: false,
+});
 
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { email, name, picture, sub } = payload;
-
-    let user = await User.findOne({ email });
-
-    if (!user) {
-      user = await User.create({
-        name,
-        email,
-        googleId: sub,
-        profilePicture: picture,
-        isVerified: true,
-      });
-    } else if (!user.googleId) {
-      // Link Google account to existing manual account
-      user.googleId = sub;
-      if (picture) user.profilePicture = picture;
-      await user.save();
-    }
-
-    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.json({ success: true, token: jwtToken, user });
-  } catch (error) {
-    res.status(500).json({ message: "Google authentication failed", error: error.message });
-  }
-};
+exports.googleCallback = [
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: "/login",
+  }),
+  (req, res) => {
+    const token = createToken(req.user);
+    // redirect to frontend with token in query param
+    res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+  },
+];
 
 // ================= FORGOT PASSWORD =================
 exports.forgotPassword = async (req, res) => {
@@ -98,7 +81,11 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    await sendEmail(email, "Password Reset OTP", `<h2>Password Reset Request</h2><h1>${otp}</h1><p>Expires in 10 minutes.</p>`);
+    await sendEmail(
+      email,
+      "Password Reset OTP",
+      `<h2>Password Reset Request</h2><h1>${otp}</h1><p>Expires in 10 minutes.</p>`,
+    );
     res.status(200).json({ message: "OTP sent to email" });
   } catch (error) {
     res.status(500).json({ message: error.message || "Server error" });
@@ -111,7 +98,11 @@ exports.resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user || user.resetPasswordToken !== otp || user.resetPasswordExpires < Date.now()) {
+    if (
+      !user ||
+      user.resetPasswordToken !== otp ||
+      user.resetPasswordExpires < Date.now()
+    ) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
@@ -138,7 +129,11 @@ exports.resendOTP = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    await sendEmail(email, "Resend Password OTP", `<h2>Your new OTP</h2><h1>${otp}</h1>`);
+    await sendEmail(
+      email,
+      "Resend Password OTP",
+      `<h2>Your new OTP</h2><h1>${otp}</h1>`,
+    );
     res.status(200).json({ message: "OTP resent successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

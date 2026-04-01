@@ -1,32 +1,49 @@
 const passport = require("passport");
-const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../models/usersModel"); // adjust path if needed
+const { Strategy: GoogleStrategy } = require("passport-google-oauth20");
+const User = require("../models/usersModel");
 
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    },
+    async (_accessToken, _refreshToken, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value;
 
-passport.deserializeUser(async (id, done) => {
-  const user = await User.findById(id);
-  done(null, user);
-});
+        if (!email) {
+          return done(new Error("No email returned from Google"), null);
+        }
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:5000/api/auth/google/callback"
-}, async (accessToken, refreshToken, profile, done) => {
-  try {
-    let user = await User.findOne({ googleId: profile.id });
-    if (!user) {
-      user = await User.create({
-        googleId: profile.id,
-        email: profile.emails[0].value,
-        name: profile.displayName
-      });
-    }
-    return done(null, user);
-  } catch (err) {
-    return done(err, null);
-  }
-}));
+        // check if user already exists
+        let user = await User.findOne({
+          $or: [{ googleId: profile.id }, { email }],
+        });
+
+        if (user) {
+          // update googleId if they registered manually before
+          if (!user.googleId) {
+            user.googleId = profile.id;
+            await user.save();
+          }
+          return done(null, user);
+        }
+
+        // create new user
+        user = await User.create({
+          name: profile.displayName,
+          email,
+          googleId: profile.id,
+        });
+
+        return done(null, user);
+      } catch (error) {
+        return done(error, null);
+      }
+    },
+  ),
+);
+
+module.exports = passport;
