@@ -11,9 +11,10 @@ const {
   getCompletedTasks,
 } = require("../controllers/taskController");
 
-// Get all tasks
+// Get tasks for logged-in user
 router.get("/", protect, getTasks);
-// Get completed tasks
+
+// Get completed tasks for logged-in user
 router.get("/completed", protect, getCompletedTasks);
 
 // Create task with optional image
