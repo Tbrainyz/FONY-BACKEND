@@ -38,6 +38,11 @@ exports.loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Block check
+    if (user.isBlocked) {
+      return res.status(403).json({ message: "Your account has been blocked. Contact admin." });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
@@ -63,8 +68,14 @@ exports.googleCallback = [
     failureRedirect: "/login",
   }),
   (req, res) => {
-    const token = createToken(req.user);
-    // redirect to frontend with token in query param
+    // ✅ Block check
+    if (req.user.isBlocked) {
+      return res.redirect(`${process.env.CLIENT_URL}/login?error=blocked`);
+    }
+
+    const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
     res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
   },
 ];
@@ -84,7 +95,7 @@ exports.forgotPassword = async (req, res) => {
     await sendEmail(
       email,
       "Password Reset OTP",
-      `<h2>Password Reset Request</h2><h1>${otp}</h1><p>Expires in 10 minutes.</p>`,
+      `<h2>Password Reset Request</h2><h1>${otp}</h1><p>Expires in 10 minutes.</p>`
     );
     res.status(200).json({ message: "OTP sent to email" });
   } catch (error) {
@@ -132,7 +143,7 @@ exports.resendOTP = async (req, res) => {
     await sendEmail(
       email,
       "Resend Password OTP",
-      `<h2>Your new OTP</h2><h1>${otp}</h1>`,
+      `<h2>Your new OTP</h2><h1>${otp}</h1>`
     );
     res.status(200).json({ message: "OTP resent successfully" });
   } catch (error) {
