@@ -57,29 +57,83 @@ exports.loginUser = async (req, res) => {
 };
 
 // ================= GOOGLE AUTH =================
-exports.googleAuth = passport.authenticate("google", {
-  scope: ["profile", "email"],
-  session: false,
-});
+// ================= GOOGLE AUTH =================
 
-exports.googleCallback = [
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect: "/login",
-  }),
-  (req, res) => {
-    // ✅ Block check
-    if (req.user.isBlocked) {
-      return res.redirect(`${process.env.CLIENT_URL}/login?error=blocked`);
+// This handles the token sent from frontend (@react-oauth/google)
+exports.googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;   // This is the credential from Google
+
+    if (!token) {
+      return res.status(400).json({ message: "Google token is required" });
     }
 
-    const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
+    // Verify the Google token (Recommended way)
+    const { OAuth2Client } = require("google-auth-library");
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const googleId = payload["sub"];
+    const email = payload["email"];
+    const name = payload["name"];
+    const picture = payload["picture"];
+
+    if (!email) {
+      return res.status(400).json({ message: "No email returned from Google" });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (!user) {
+      // Create new user
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        isVerified: true,
+        profilePicture: picture || null,
+      });
+    } else {
+      // Update googleId if user existed before
+      if (!user.googleId) {
+        user.googleId = googleId;
+        if (picture) user.profilePicture = picture;
+        await user.save();
+      }
+    }
+
+    // Block check
+    if (user.isBlocked) {
+      return res.status(403).json({ message: "Your account has been blocked" });
+    }
+
+    // Generate JWT token (consistent with your login)
+    const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-    res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
-  },
-];
 
+    res.status(200).json({
+      token: jwtToken,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePicture: user.profilePicture,
+        isVerified: user.isVerified,
+      },
+    });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    res.status(500).json({ message: "Google authentication failed" });
+  }
+};
 // ================= FORGOT PASSWORD =================
 exports.forgotPassword = async (req, res) => {
   try {
