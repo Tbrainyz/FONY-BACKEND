@@ -17,10 +17,10 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 
-// ✅ Proper CORS setup for Vercel frontend
+// ✅ Proper CORS setup using CLIENT_URL from .env
 const corsOptions = {
-  origin: "https://fony-frontend-767q.vercel.app", // your deployed frontend
-  credentials: true, // allow cookies/sessions
+  origin: process.env.CLIENT_URL, // e.g. https://fony-frontend-767q.vercel.app
+  credentials: true,              // allow cookies/sessions
 };
 app.use(cors(corsOptions));
 
@@ -29,7 +29,7 @@ app.use(express.json());
 
 // ✅ Session + Passport
 app.use(
-  session({ secret: "secretKey", resave: false, saveUninitialized: false })
+  session({ secret: process.env.JWT_SECRET || "secretKey", resave: false, saveUninitialized: false })
 );
 app.use(passport.initialize());
 app.use(passport.session());
