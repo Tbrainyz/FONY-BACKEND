@@ -65,7 +65,7 @@ exports.googleAuth = passport.authenticate("google", {
 exports.googleCallback = [
   passport.authenticate("google", {
     session: false,
-    failureRedirect: "/login",
+    failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
   }),
   (req, res) => {
     // ✅ Block check
@@ -76,6 +76,7 @@ exports.googleCallback = [
     const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
+
     res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
   },
 ];
