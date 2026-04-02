@@ -151,6 +151,29 @@ exports.resendOTP = async (req, res) => {
   }
 };
 
+// ================= CHANGE PASSWORD =================
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id); // req.user comes from protect middleware
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Unable to update" });
+  }
+};
+
+
 // ================= UPDATE PROFILE =================
 exports.updateProfile = async (req, res) => {
   try {
