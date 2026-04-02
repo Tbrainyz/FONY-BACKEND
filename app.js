@@ -17,10 +17,14 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 
-// ✅ CORS
-app.use(cors());
+// ✅ Proper CORS setup for Vercel frontend
+const corsOptions = {
+  origin: "https://fony-frontend-767q.vercel.app", // your deployed frontend
+  credentials: true, // allow cookies/sessions
+};
+app.use(cors(corsOptions));
 
-// ✅ Parse JSON
+// ✅ Parse JSON bodies
 app.use(express.json());
 
 // ✅ Session + Passport
