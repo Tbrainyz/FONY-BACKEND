@@ -23,7 +23,7 @@ const allowedOrigins = [
   "https://fony-frontend-767q-bnq65so2a-tbrainyzs-projects.vercel.app" // Vercel deployment
 ];
 
-// ✅ Single CORS setup
+// ✅ Single clean CORS setup
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -37,8 +37,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// ✅ Handle preflight requests explicitly
-
+// ✅ Parse JSON bodies
 app.use(express.json());
 
 // ✅ Session + Passport
@@ -51,7 +50,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Serve uploaded images
+// ✅ Serve uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // ✅ Error handler
