@@ -19,7 +19,7 @@ const port = process.env.PORT || 5000;
 
 // ✅ Allowed origins (local + deployed frontend)
 const allowedOrigins = [
-  "http://localhost:5174", // dev
+  "http://localhost:5173", // dev
   "https://fony-frontend-767q.vercel.app/" // Vercel deployment
 ];
 
