@@ -25,13 +25,13 @@ router.get("/google", googleAuth);
 router.get("/google/callback", googleCallback);
 
 // ================= PASSWORD MANAGEMENT =================
-router.post("/users/forgot-password", forgotPassword);
-router.post("/users/resend-otp", resendOTP);
-router.post("/users/reset-password", resetPassword);
-router.post("/users/change-password", protect, changePassword); // ✅ new route
+router.post("/forgot-password", forgotPassword);
+router.post("/resend-otp", resendOTP);
+router.post("/reset-password", resetPassword);
+router.post("/change-password", protect, changePassword); // ✅ new route
 
 // ================= PROFILE MANAGEMENT =================
-router.put("/users/profile", protect, upload, updateProfile); // <-- handles image upload
-router.delete("/users/delete-user", deleteUserByEmail);
+router.put("/profile", protect, upload, updateProfile); // <-- handles image upload
+router.delete("/delete-user", deleteUserByEmail);
 
 module.exports = router;
