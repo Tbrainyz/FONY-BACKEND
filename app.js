@@ -20,7 +20,7 @@ const port = process.env.PORT || 5000;
 // ✅ Allowed origins (local + deployed frontend)
 const allowedOrigins = [
   "http://localhost:5174", // dev
-  "https://fony-frontend-767q-bnq65so2a-tbrainyzs-projects.vercel.app" // Vercel deployment
+  "https://fony-frontend-767q.vercel.app/" // Vercel deployment
 ];
 
 // ✅ Single clean CORS setup
