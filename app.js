@@ -7,7 +7,7 @@ const session = require("express-session");
 const passport = require("passport");
 const path = require("path");
 
-// Load passport config (Google strategy)
+// Load passport config
 require("./config/passport");
 
 const userRoutes = require("./routes/userRoutes");
@@ -19,11 +19,11 @@ const port = process.env.PORT || 5000;
 
 // ✅ Allowed origins (local + deployed frontend)
 const allowedOrigins = [
-  "http://localhost:5174", // React dev server
+  "http://localhost:5174", // dev
   "https://fony-frontend-767q-bnq65so2a-tbrainyzs-projects.vercel.app" // Vercel deployment
 ];
 
-// ✅ Single, clean CORS configuration
+// ✅ Single CORS setup
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -36,6 +36,8 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
+// ✅ Handle preflight requests explicitly
 
 app.use(express.json());
 
