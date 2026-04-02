@@ -17,16 +17,15 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 
-
-// ✅ Single clean CORS setup
+// ✅ CORS
 app.use(cors());
 
-// ✅ Parse JSON bodies
+// ✅ Parse JSON
 app.use(express.json());
 
 // ✅ Session + Passport
 app.use(
-  session({ secret: "secretKey", resave: false, saveUninitialized: false }),
+  session({ secret: "secretKey", resave: false, saveUninitialized: false })
 );
 app.use(passport.initialize());
 app.use(passport.session());
@@ -38,6 +37,11 @@ app.use("/api/admin", adminRoutes);
 
 // ✅ Serve uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ✅ Catch-all fallback (no '*' string!)
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
 // ✅ Error handler
 app.use((err, req, res, next) => {
