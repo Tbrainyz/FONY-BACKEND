@@ -19,49 +19,30 @@ passport.use(
           return done(new Error("No email returned from Google"), null);
         }
 
-        // Check if user already exists by email
         let user = await User.findOne({ email });
 
         if (user) {
-          // If user exists, we update fields if they are missing or stale
-          const updatedFields = {
-            name: profile.displayName || user.name,
-            profilePicture: profile.photos?.[0]?.value || user.profilePicture,
-            googleId: profile.id, // Ensure Google ID is always linked
-            email: email, // Confirm email is still correct
-            phone: user.phone || "", // If phone was already set, keep it
-          };
-
-          // Update the user only if fields need updating
-          // (e.g., no need to overwrite a name if it's already set)
-          let needUpdate = false;
-          if (!user.name && updatedFields.name) {
-            user.name = updatedFields.name;
-            needUpdate = true;
-          }
-          if (!user.profilePicture && updatedFields.profilePicture) {
-            user.profilePicture = updatedFields.profilePicture;
-            needUpdate = true;
-          }
-          if (user.googleId !== profile.id) {
+          // Update fields if missing
+          if (!user.googleId) {
             user.googleId = profile.id;
-            needUpdate = true;
           }
-
-          if (needUpdate) {
-            await user.save();
+          if (!user.name) {
+            user.name = profile.displayName;
           }
-
+          if (!user.profilePicture && profile.photos?.[0]?.value) {
+            user.profilePicture = profile.photos[0].value;
+          }
+          await user.save();
           return done(null, user);
         }
 
-        // If user doesn't exist, create a new one with Google details
+        // Create new user if not found
         user = await User.create({
           name: profile.displayName,
           email,
           googleId: profile.id,
           profilePicture: profile.photos?.[0]?.value || "",
-          phone: "", // No phone data from Google, leave blank
+          phone: "", // Google doesn't provide phone, leave blank
         });
 
         return done(null, user);

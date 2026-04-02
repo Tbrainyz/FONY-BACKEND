@@ -68,7 +68,6 @@ exports.googleCallback = [
     failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
   }),
   (req, res) => {
-    // ✅ Block check
     if (req.user.isBlocked) {
       return res.redirect(`${process.env.CLIENT_URL}/login?error=blocked`);
     }
@@ -156,7 +155,7 @@ exports.resendOTP = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const user = await User.findById(req.user._id); // req.user comes from protect middleware
+    const user = await User.findById(req.user._id); // req.user from auth middleware
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -173,7 +172,6 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ message: error.message || "Unable to update" });
   }
 };
-
 
 // ================= UPDATE PROFILE =================
 exports.updateProfile = async (req, res) => {
