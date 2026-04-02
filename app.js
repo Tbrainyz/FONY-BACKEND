@@ -22,6 +22,10 @@ const allowedOrigins = [
   "https://your-frontend-domain.com" ,// add your deployed frontend here
   "https://fony-frontend-767q.vercel.app" // Vercel deployment
 ];
+app.use(cors({
+  origin: ["https://your-vercel-app.vercel.app"],
+  credentials: true,
+}));
 
 app.use(cors({
   origin: allowedOrigins,
