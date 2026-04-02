@@ -37,6 +37,8 @@ app.use((req, res, next) => {
 
   next();
 });
+console.log("CLIENT ID:", process.env.GOOGLE_CLIENT_ID);
+console.log("CALLBACK:", process.env.GOOGLE_CALLBACK_URL);
 
 // Body parsers
 app.use(express.json({ limit: "10mb" }));
