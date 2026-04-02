@@ -10,24 +10,20 @@ passport.use(
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
     },
     async (accessToken, refreshToken, profile, done) => {
-      // ✅ DEBUG LOG (VERY IMPORTANT)
       console.log("Google user:", profile);
 
       try {
         const email = profile.emails?.[0]?.value;
 
-        // ❌ If Google didn't return email
         if (!email) {
           return done(new Error("No email returned from Google"), null);
         }
 
-        // 🔍 Check if user already exists (by googleId OR email)
         let user = await User.findOne({
           $or: [{ googleId: profile.id }, { email }],
         });
 
         if (user) {
-          // ✅ If user exists but no googleId, update it
           if (!user.googleId) {
             user.googleId = profile.id;
             await user.save();
@@ -36,16 +32,17 @@ passport.use(
           return done(null, user);
         }
 
-        // 🆕 Create new user
+        // ✅ UPDATED HERE
         user = await User.create({
           name: profile.displayName,
           email,
           googleId: profile.id,
+          profilePicture: profile.photos?.[0]?.value || "",
         });
 
         return done(null, user);
       } catch (error) {
-        console.error("Google Auth Error:", error); // ✅ extra debug
+        console.error("Google Auth Error:", error);
         return done(error, null);
       }
     }
