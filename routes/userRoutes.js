@@ -21,8 +21,8 @@ router.post("/forgot-password", forgotPassword);
 router.post("/resend-otp", resendOTP);
 router.post("/reset-password", resetPassword);
 router.post("/login", loginUser);
-router.post("/google", googleAuth);
-router.post("/google/callback", googleCallback);
+router.get("/google", googleAuth);
+router.get("/google/callback", googleCallback);
 
 // ================= PROFILE UPDATE =================
 router.put("/profile", protect, upload, updateProfile); // <-- no .single()
