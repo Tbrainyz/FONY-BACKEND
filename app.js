@@ -15,47 +15,44 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 
-// ====================== MANUAL CORS MIDDLEWARE ======================
-const corsMiddleware = (req, res, next) => {
-  const origin = req.headers.origin;
+// 1. Trust proxy - VERY IMPORTANT on Render
+app.set("trust proxy", 1);
 
-  // Allow only your frontend (most secure)
-  if (origin === process.env.CLIENT_URL) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-  } else {
-    // For development or testing, you can temporarily allow all (not recommended in production)
-    // res.setHeader("Access-Control-Allow-Origin", "*");
+// 2. MANUAL CORS (this is where you handle CORS)
+app.use((req, res, next) => {
+  const allowedOrigin = process.env.CLIENT_URL;
+
+  if (allowedOrigin) {
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   }
 
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
 
-  // Handle preflight OPTIONS requests
+  // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
   next();
-};
+});
 
-// Apply CORS middleware FIRST
-app.use(corsMiddleware);
-
-// ====================== BODY PARSERS ======================
+// Body parsers
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// ====================== SESSION & PASSPORT ======================
+// Session configuration (critical part for Render)
 app.use(
   session({
-    secret: process.env.JWT_SECRET || "fallbackSecretChangeInProduction",
+    secret: process.env.JWT_SECRET || "nelly",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7,
+      secure: true,           // Must be true because Render uses HTTPS
+      sameSite: "none",       // Required when frontend and backend are on different domains
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      httpOnly: true,
     },
   })
 );
@@ -63,41 +60,36 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ====================== ROUTES ======================
+// Routes
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/users", userRoutes);        // ← Your frontend is calling this path
 
-// Support without /api in case your frontend is calling /users/login
-app.use("/users", userRoutes);
-
-// Static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ====================== ERROR HANDLING ======================
+// Error handling
 app.use((req, res) => {
-  console.log(`404 - ${req.method} ${req.originalUrl}`);
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
 app.use((err, req, res, next) => {
-  console.error("🔥 FULL ERROR:", err);
+  console.error("🔥 ERROR:", err);
   res.status(500).json({ success: false, message: err.message || "Internal Server Error" });
 });
 
-// ====================== START SERVER ======================
+// Start server
 const startServer = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected successfully");
+    console.log("✅ MongoDB connected");
 
     app.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
-      console.log(`🌐 Allowed Frontend: ${process.env.CLIENT_URL}`);
-      console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
+      console.log(`🌐 Allowed origin: ${process.env.CLIENT_URL}`);
     });
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error.message);
+    console.error("❌ MongoDB error:", error.message);
     process.exit(1);
   }
 };
