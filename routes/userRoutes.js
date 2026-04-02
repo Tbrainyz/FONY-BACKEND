@@ -25,9 +25,9 @@ router.get("/google", googleAuth);
 router.get("/google/callback", googleCallback);
 
 // ================= PASSWORD MANAGEMENT =================
-router.post("/forgot-password", protect, forgotPassword);
-router.post("/resend-otp", protect, resendOTP);
-router.post("/reset-password", protect, resetPassword);
+router.post("/forgot-password", forgotPassword);
+router.post("/resend-otp",  resendOTP);
+router.post("/reset-password",  resetPassword);
 router.post("/change-password", protect, changePassword); // ✅ new route
 
 // ================= PROFILE MANAGEMENT =================
