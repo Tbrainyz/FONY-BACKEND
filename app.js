@@ -19,7 +19,8 @@ const port = process.env.PORT || 5000;
 // ✅ Explicit CORS configuration
 const allowedOrigins = [
   "http://localhost:5174",           // React dev server
-  "https://your-frontend-domain.com" // add your deployed frontend here
+  "https://your-frontend-domain.com" ,// add your deployed frontend here
+  "https://fony-frontend-767q.vercel.app" // Vercel deployment
 ];
 
 app.use(cors({
