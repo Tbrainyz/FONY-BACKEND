@@ -64,9 +64,7 @@ app.use(passport.session());
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/users", userRoutes);        // ← Your frontend is calling this path
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Error handling
 app.use((req, res) => {
