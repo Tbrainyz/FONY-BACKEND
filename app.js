@@ -18,7 +18,7 @@ const port = process.env.PORT || 5000;
 
 // ✅ Explicit CORS configuration
 const allowedOrigins = [
-  "http://localhost:5173",           // React dev server
+  "http://localhost:5174",           // React dev server
   "https://your-frontend-domain.com" // add your deployed frontend here
 ];
 
