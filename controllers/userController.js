@@ -38,6 +38,7 @@ exports.loginUser = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Block check
     if (user.isBlocked) {
       return res.status(403).json({ message: "Your account has been blocked. Contact admin." });
     }
@@ -56,13 +57,10 @@ exports.loginUser = async (req, res) => {
 };
 
 // ================= GOOGLE AUTH =================
-exports.googleAuth = (req, res, next) => {
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-    prompt: "select_account",     // Helps during testing
-    session: false,
-  })(req, res, next);
-};
+exports.googleAuth = passport.authenticate("google", {
+  scope: ["profile", "email"],
+  session: false,
+});
 
 exports.googleCallback = [
   passport.authenticate("google", {
@@ -70,10 +68,6 @@ exports.googleCallback = [
     failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
   }),
   (req, res) => {
-    if (!req.user) {
-      return res.redirect(`${process.env.CLIENT_URL}/login?error=google_failed`);
-    }
-
     if (req.user.isBlocked) {
       return res.redirect(`${process.env.CLIENT_URL}/login?error=blocked`);
     }
@@ -82,7 +76,6 @@ exports.googleCallback = [
       expiresIn: "7d",
     });
 
-    // Redirect to frontend with token
     res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
   },
 ];
@@ -162,7 +155,7 @@ exports.resendOTP = async (req, res) => {
 exports.changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id); // req.user from auth middleware
 
     if (!user) return res.status(404).json({ message: "User not found" });
 

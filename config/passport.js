@@ -8,58 +8,50 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
-      scope: ["profile", "email"],
     },
     async (accessToken, refreshToken, profile, done) => {
-      console.log("=== GOOGLE PROFILE DEBUG ===");
-      console.log("Display Name:", profile.displayName);
-      console.log("Email:", profile.emails?.[0]?.value);
-      console.log("Photos:", profile.photos);
-      console.log("Picture from _json:", profile._json?.picture);
-      console.log("=============================");
+      console.log("Google user:", profile);
 
       try {
         const email = profile.emails?.[0]?.value;
-        if (!email) {
-          return done(new Error("No email from Google"), null);
-        }
 
-        const photoUrl = profile.photos?.[0]?.value || profile._json?.picture || "";
+        if (!email) {
+          return done(new Error("No email returned from Google"), null);
+        }
 
         let user = await User.findOne({ email });
 
         if (user) {
-          let isUpdated = false;
-          if (!user.googleId) { user.googleId = profile.id; isUpdated = true; }
-          if (profile.displayName) { user.name = profile.displayName; isUpdated = true; }
-          if (photoUrl && user.profilePicture !== photoUrl) {
-            user.profilePicture = photoUrl;
-            isUpdated = true;
+          // Update fields if missing
+          if (!user.googleId) {
+            user.googleId = profile.id;
           }
-          if (isUpdated) await user.save();
+          if (!user.name) {
+            user.name = profile.displayName;
+          }
+          if (!user.profilePicture && profile.photos?.[0]?.value) {
+            user.profilePicture = profile.photos[0].value;
+          }
+          await user.save();
           return done(null, user);
         }
 
+        // Create new user if not found
         user = await User.create({
-          name: profile.displayName || "Google User",
+          name: profile.displayName,
           email,
           googleId: profile.id,
-          profilePicture: photoUrl,
-          phone: "",
-          isVerified: true,
+          profilePicture: profile.photos?.[0]?.value || "",
+          phone: "", // Google doesn't provide phone, leave blank
         });
 
-        console.log("New Google user created:", user._id);
         return done(null, user);
       } catch (error) {
-        console.error("Google Strategy Error:", error.name || "", error.message);
+        console.error("Google Auth Error:", error);
         return done(error, null);
       }
     }
   )
 );
-
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
 
 module.exports = passport;
