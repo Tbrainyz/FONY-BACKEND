@@ -1,7 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const protect = require("../middlewares/authMiddleware");
-const upload = require("../middlewares/uploadMiddleware"); // streamifier version
+const upload = require("../middlewares/uploadMiddleware");
+
+// Import passport here
+const passport = require("../config/passport");   // ← Add this line
 
 const {
   updateProfile,
@@ -13,7 +16,7 @@ const {
   resetPassword,
   resendOTP,
   deleteUserByEmail,
-  changePassword, // ✅ new controller
+  changePassword,
 } = require("../controllers/userController");
 
 // ================= REGISTRATION & LOGIN =================
@@ -22,16 +25,25 @@ router.post("/login", loginUser);
 
 // ================= GOOGLE AUTH =================
 router.get("/google", googleAuth);
-router.get("/google/callback", googleCallback);
+
+// Google Callback Route - Fixed & Clean
+router.get(
+  "/google/callback",
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
+  }),
+  googleCallback
+);
 
 // ================= PASSWORD MANAGEMENT =================
 router.post("/forgot-password", forgotPassword);
-router.post("/resend-otp",  resendOTP);
-router.post("/reset-password",  resetPassword);
-router.post("/change-password", protect, changePassword); // ✅ new route
+router.post("/resend-otp", resendOTP);
+router.post("/reset-password", resetPassword);
+router.post("/change-password", protect, changePassword);
 
 // ================= PROFILE MANAGEMENT =================
-router.put("/profile", protect, upload, updateProfile); // <-- handles image upload
+router.put("/profile", protect, upload, updateProfile);
 router.delete("/delete-user", deleteUserByEmail);
 
 module.exports = router;
