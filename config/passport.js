@@ -12,22 +12,21 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       console.log("=== GOOGLE PROFILE DEBUG ===");
-      console.log("Full Profile:", JSON.stringify(profile, null, 2));
+      console.log("ID:", profile.id);
+      console.log("Display Name:", profile.displayName);
+      console.log("Name:", profile.name);
+      console.log("Emails:", profile.emails);
+      console.log("Photos:", profile.photos);
+      console.log("Picture from _json:", profile._json?.picture);
       console.log("=============================");
 
       try {
         const email = profile.emails?.[0]?.value;
-
         if (!email) {
           return done(new Error("No email returned from Google"), null);
         }
 
-        // Better photo extraction - Google often puts it in _json
-        const photoUrl = 
-          profile.photos?.[0]?.value || 
-          profile._json?.picture || 
-          profile._json?.image?.url || 
-          "";
+        const photoUrl = profile.photos?.[0]?.value || profile._json?.picture || "";
 
         let user = await User.findOne({ email });
 
@@ -38,23 +37,19 @@ passport.use(
             user.googleId = profile.id;
             isUpdated = true;
           }
-
-          // Force sync name and picture on every Google login
           if (profile.displayName) {
             user.name = profile.displayName;
             isUpdated = true;
           }
-
-          if (photoUrl) {
+          if (photoUrl && user.profilePicture !== photoUrl) {
             user.profilePicture = photoUrl;
             isUpdated = true;
           }
 
           if (isUpdated) {
             await user.save();
-            console.log("✅ Existing user updated with Google name & picture");
+            console.log("✅ Existing user updated with Google data");
           }
-
           return done(null, user);
         }
 
@@ -65,21 +60,19 @@ passport.use(
           googleId: profile.id,
           profilePicture: photoUrl,
           phone: "",
-          isVerified: true,        // Important - match your register logic
+          isVerified: true,
         });
 
         console.log("✅ New Google user created:", user._id);
         return done(null, user);
-
       } catch (error) {
-        console.error("Google Strategy Error:", error);
+        console.error("Google Strategy Error:", error.name || error, error.message);
         return done(error, null);
       }
     }
   )
 );
 
-// For JWT (session: false)
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 

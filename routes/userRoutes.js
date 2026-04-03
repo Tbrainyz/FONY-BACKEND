@@ -3,8 +3,7 @@ const router = express.Router();
 const protect = require("../middlewares/authMiddleware");
 const upload = require("../middlewares/uploadMiddleware");
 
-// Import passport here
-const passport = require("../config/passport");   // ← Add this line
+const passport = require("../config/passport");
 
 const {
   updateProfile,
@@ -19,14 +18,13 @@ const {
   changePassword,
 } = require("../controllers/userController");
 
-// ================= REGISTRATION & LOGIN =================
+// Registration & Login
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 
-// ================= GOOGLE AUTH =================
+// Google OAuth
 router.get("/google", googleAuth);
 
-// Google Callback Route - Fixed & Clean
 router.get(
   "/google/callback",
   passport.authenticate("google", {
@@ -36,13 +34,11 @@ router.get(
   googleCallback
 );
 
-// ================= PASSWORD MANAGEMENT =================
+// Other routes
 router.post("/forgot-password", forgotPassword);
 router.post("/resend-otp", resendOTP);
 router.post("/reset-password", resetPassword);
 router.post("/change-password", protect, changePassword);
-
-// ================= PROFILE MANAGEMENT =================
 router.put("/profile", protect, upload, updateProfile);
 router.delete("/delete-user", deleteUserByEmail);
 
