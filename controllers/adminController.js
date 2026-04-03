@@ -22,7 +22,9 @@ exports.getUsers = async (req, res) => {
     const limit = 10;
     const skip = (page - 1) * limit;
 
+    // ✅ Sort: admins first, then newest users
     const users = await User.find()
+      .sort({ role: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .select("name email profilePicture createdAt role blocked");
@@ -47,7 +49,9 @@ exports.getUsers = async (req, res) => {
 // RAW ALL USERS
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("name email role blocked createdAt");
+    const users = await User.find()
+      .sort({ role: -1, createdAt: -1 }) // ✅ same sorting for consistency
+      .select("name email role blocked createdAt");
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: "Error fetching all users", error: err.message });
@@ -90,7 +94,9 @@ exports.unblockUser = async (req, res) => {
 // GET ALL TASKS (ADMIN VIEW)
 exports.getAllTasks = async (req, res) => {
   try {
-    const tasks = await Task.find().populate("user", "name email").sort({ createdAt: -1 });
+    const tasks = await Task.find()
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
     res.json(tasks);
   } catch (err) {
     res.status(500).json({ message: "Error fetching tasks", error: err.message });
