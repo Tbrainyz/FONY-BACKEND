@@ -32,6 +32,5 @@ router.post("/change-password", protect, changePassword); // ✅ new route
 
 // ================= PROFILE MANAGEMENT =================
 router.put("/profile", protect, upload, updateProfile); // <-- handles image upload
-router.delete("/delete-user", deleteUserByEmail);
 
 module.exports = router;
