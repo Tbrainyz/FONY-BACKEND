@@ -8,10 +8,15 @@ const {
   getUserTasks,
   getDashboard,
   getUsers,
-  deleteUser, // ✅ added
+  deleteUser,
 } = require("../controllers/adminController");
 
+const protect = require("../middlewares/authMiddleware");
+
 const router = express.Router();
+
+// 🔐 Protect ALL admin routes
+router.use(protect);
 
 // ==================== GET ROUTES ====================
 router.get("/users", getUsers);
@@ -25,7 +30,7 @@ router.put("/make-admin/:id", makeAdmin);
 router.put("/block/:id", blockUser);
 router.put("/unblock/:id", unblockUser);
 
-// ==================== DELETE USER ====================
-router.delete("/delete/:id", deleteUser); // 🔥 important
+// ==================== DELETE ====================
+router.delete("/delete/:id", deleteUser);
 
 module.exports = router;

@@ -123,13 +123,15 @@ exports.blockUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { blocked: true },
+      { isBlocked: true }, // ✅ FIXED
       { new: true }
     );
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.json({ message: "User blocked", user });
+    res.json({ message: "User blocked successfully", user });
   } catch (err) {
     res.status(500).json({
       message: "Error blocking user",
@@ -143,13 +145,15 @@ exports.unblockUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { blocked: false },
+      { isBlocked: false }, // ✅ FIXED
       { new: true }
     );
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.json({ message: "User unblocked", user });
+    res.json({ message: "User unblocked successfully", user });
   } catch (err) {
     res.status(500).json({
       message: "Error unblocking user",

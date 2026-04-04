@@ -21,15 +21,14 @@ const protect = async (req, res, next) => {
         });
       }
 
-      // 🔥🔥🔥 THIS IS THE KEY FIX
-      if (user.blocked) {
+      // 🔥🔥 CRITICAL FIX
+      if (user.isBlocked) {
         return res.status(403).json({
-          message: "Your account has been blocked. Contact admin.",
+          message: "Your account has been blocked by admin",
         });
       }
 
       req.user = user;
-
       next();
     } catch (error) {
       return res.status(401).json({
