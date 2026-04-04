@@ -29,7 +29,7 @@ exports.getUsers = async (req, res) => {
       .sort({ role: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select("name email profilePicture createdAt role blocked");
+      .select("name email profilePicture createdAt role isBlocked") // ✅ FIXED
 
     const usersWithTasks = await Promise.all(
       users.map(async (user) => {
@@ -64,7 +64,7 @@ exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
       .sort({ role: -1, createdAt: -1 })
-      .select("name email role blocked createdAt");
+      .select("name email role isBlocked createdAt"); // ✅ FIXED
 
     res.json(users);
   } catch (err) {
@@ -75,7 +75,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// ==================== DELETE USER (🔥 NEW) ====================
+// ==================== DELETE USER ====================
 exports.deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
@@ -86,10 +86,9 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // 🔥 Clean up user's tasks
     await Task.deleteMany({ user: userId });
 
-    res.json({ message: "User and associated tasks deleted successfully" });
+    res.json({ message: "User and tasks deleted successfully" });
   } catch (err) {
     res.status(500).json({
       message: "Error deleting user",
@@ -123,13 +122,11 @@ exports.blockUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { isBlocked: true }, // ✅ FIXED
+      { isBlocked: true },
       { new: true }
     );
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({ message: "User blocked successfully", user });
   } catch (err) {
@@ -145,13 +142,11 @@ exports.unblockUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { isBlocked: false }, // ✅ FIXED
+      { isBlocked: false },
       { new: true }
     );
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({ message: "User unblocked successfully", user });
   } catch (err) {

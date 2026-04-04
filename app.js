@@ -2,9 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const mongoose = require("mongoose");
-const session = require("express-session");
 const passport = require("passport");
-const path = require("path");
 
 require("./config/passport");
 
@@ -15,10 +13,10 @@ const adminRoutes = require("./routes/adminRoutes");
 const app = express();
 const port = process.env.PORT || 5000;
 
-// 1. Trust proxy - VERY IMPORTANT on Render
+// ==================== TRUST PROXY ====================
 app.set("trust proxy", 1);
 
-// 2. MANUAL CORS (this is where you handle CORS)
+// ==================== CORS ====================
 app.use((req, res, next) => {
   const allowedOrigin = process.env.CLIENT_URL;
 
@@ -27,71 +25,64 @@ app.use((req, res, next) => {
   }
 
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,DELETE,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
 
-  // Handle preflight OPTIONS request
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.sendStatus(200);
 
   next();
 });
-console.log("CLIENT ID:", process.env.GOOGLE_CLIENT_ID);
-console.log("CALLBACK:", process.env.GOOGLE_CALLBACK_URL);
 
-// Body parsers
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// ==================== BODY PARSER ====================
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Session configuration (critical part for Render)
-app.use(
-  session({
-    secret: process.env.JWT_SECRET || "nelly",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: true,           // Must be true because Render uses HTTPS
-      sameSite: "none",       // Required when frontend and backend are on different domains
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      httpOnly: true,
-    },
-  })
-);
-
+// ==================== PASSPORT ====================
 app.use(passport.initialize());
 
-
-// Routes
+// ==================== ROUTES ====================
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
 
+// ==================== KEEP ALIVE ROUTE ====================
+app.get("/ping", (req, res) => {
+  res.status(200).send("Server is awake 🚀");
+});
 
-// Error handling
+// ==================== ERROR HANDLING ====================
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: "Route not found" });
+  res.status(404).json({ message: "Route not found" });
 });
 
 app.use((err, req, res, next) => {
   console.error("🔥 ERROR:", err);
-  res.status(500).json({ success: false, message: err.message || "Internal Server Error" });
+  res.status(500).json({
+    message: err.message || "Internal Server Error",
+  });
 });
 
-// Start server
-const startServer = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
+// ==================== START SERVER ====================
+mongoose
+  .connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+  })
+  .then(() => {
     console.log("✅ MongoDB connected");
 
     app.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
       console.log(`🌐 Allowed origin: ${process.env.CLIENT_URL}`);
     });
-  } catch (error) {
-    console.error("❌ MongoDB error:", error.message);
-    process.exit(1);
-  }
-};
-
-startServer();
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB error:", err.message);
+  });
