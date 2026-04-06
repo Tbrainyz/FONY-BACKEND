@@ -80,19 +80,26 @@ exports.googleAuth = passport.authenticate("google", {
   session: false,
 });
 
+// ================= GOOGLE CALLBACK =================
 exports.googleCallback = [
   passport.authenticate("google", {
     session: false,
     failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
   }),
   (req, res) => {
-    // 🔥 BLOCK CHECK (FIXED)
-    if (req.user.blocked) {
+    if (req.user.isBlocked) {   // Note: you used isBlocked in model, not blocked
       return res.redirect(`${process.env.CLIENT_URL}/login?error=blocked`);
     }
 
+    // Create a richer JWT with basic user info
     const token = jwt.sign(
-      { id: req.user._id },
+      {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        profilePicture: req.user.profilePicture,
+        role: req.user.role,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
