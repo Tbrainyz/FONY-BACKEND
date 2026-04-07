@@ -18,7 +18,7 @@ app.set("trust proxy", 1);
 
 // ==================== CORS ====================
 app.use((req, res, next) => {
-  const allowedOrigin = process.env.CLIENT_URL;
+  const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5174";
 
   if (allowedOrigin) {
     res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
