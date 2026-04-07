@@ -75,20 +75,40 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// ==================== DELETE USER ====================
+// ==================== DELETE USER - PROTECTED ====================
 exports.deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
+    const currentUser = req.user; // ← Must come from your auth middleware
 
-    const user = await User.findByIdAndDelete(userId);
+    if (!currentUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    if (!user) {
+    const userToDelete = await User.findById(userId);
+    if (!userToDelete) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    await Task.deleteMany({ user: userId });
+    // 🚫 Prevent Admins from deleting other Admins
+    if (userToDelete.role === "admin") {
+      return res.status(403).json({ 
+        message: "You cannot delete an Admin account" 
+      });
+    }
 
-    res.json({ message: "User and tasks deleted successfully" });
+    // Optional: Prevent self-deletion
+    if (userToDelete._id.toString() === currentUser._id.toString()) {
+      return res.status(403).json({ 
+        message: "You cannot delete your own account" 
+      });
+    }
+
+    // Delete user + their tasks
+    await Task.deleteMany({ user: userId });
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: "User and associated tasks deleted successfully" });
   } catch (err) {
     res.status(500).json({
       message: "Error deleting user",
