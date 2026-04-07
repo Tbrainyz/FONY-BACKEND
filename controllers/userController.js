@@ -32,9 +32,7 @@ exports.registerUser = async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({
-      message: error.message || "Server error",
-    });
+    res.status(500).json({ message: error.message || "Server error" });
   }
 };
 
@@ -44,54 +42,200 @@ exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
-
-    // 🔥 BLOCK CHECK (FIXED)
     if (user.blocked) {
-      return res.status(403).json({
-        message: "Your account has been blocked. Contact admin.",
-      });
+      return res.status(403).json({ message: "Your account has been blocked. Contact admin." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
-
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(200).json({ token, user });
   } catch (error) {
-    res.status(500).json({
-      message: error.message || "Server error",
-    });
+    res.status(500).json({ message: error.message || "Server error" });
   }
 };
 
-// ================= GOOGLE AUTH =================
+// ================= FORGOT PASSWORD - Send OTP =================
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOTP();
+
+    user.resetPasswordToken = otp;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await user.save();
+
+    await sendEmail(
+      email,
+      "Password Reset OTP",
+      `<h2>Password Reset Request</h2>
+       <p>Your OTP is: <strong>${otp}</strong></p>
+       <p>This OTP expires in 10 minutes.</p>`
+    );
+
+    res.status(200).json({ 
+      message: "OTP sent to your email",
+      email 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+// ================= VERIFY OTP (NEW) =================
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user || user.resetPasswordToken !== otp || user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ 
+        message: "Invalid or expired OTP" 
+      });
+    }
+
+    // OTP is valid → Mark it as verified temporarily
+    user.resetPasswordVerified = true;
+    await user.save();
+
+    res.status(200).json({ 
+      message: "OTP verified successfully",
+      email 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+// ================= RESET PASSWORD =================
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Extra security: Check OTP again
+    if (
+      user.resetPasswordToken !== otp ||
+      user.resetPasswordExpires < Date.now() ||
+      !user.resetPasswordVerified
+    ) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    user.resetPasswordVerified = false;   // reset flag
+
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+// ================= RESEND OTP =================
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOTP();
+
+    user.resetPasswordToken = otp;
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+    user.resetPasswordVerified = false;
+
+    await user.save();
+
+    await sendEmail(
+      email,
+      "New Password Reset OTP",
+      `<h2>New OTP</h2>
+       <p>Your new OTP is: <strong>${otp}</strong></p>
+       <p>Expires in 10 minutes.</p>`
+    );
+
+    res.status(200).json({ message: "OTP resent successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= CHANGE PASSWORD (Logged in) =================
+exports.changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Current password is incorrect" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Unable to update" });
+  }
+};
+
+// ================= UPDATE PROFILE =================
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (req.body.name) user.name = req.body.name;
+    if (req.body.email) user.email = req.body.email;
+    if (req.body.phone) user.phone = req.body.phone;
+    if (req.file?.cloudinaryUrl) user.profilePicture = req.file.cloudinaryUrl;
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+// Google Auth remains the same
 exports.googleAuth = passport.authenticate("google", {
   scope: ["profile", "email"],
   session: false,
 });
 
-// ================= GOOGLE CALLBACK =================
 exports.googleCallback = [
   passport.authenticate("google", {
     session: false,
     failureRedirect: `${process.env.CLIENT_URL}/login?error=google_failed`,
   }),
   (req, res) => {
-    if (req.user.isBlocked) {   // Note: you used isBlocked in model, not blocked
+    if (req.user.blocked) {
       return res.redirect(`${process.env.CLIENT_URL}/login?error=blocked`);
     }
 
-    // Create a richer JWT with basic user info
     const token = jwt.sign(
       {
         id: req.user._id,
@@ -104,164 +248,6 @@ exports.googleCallback = [
       { expiresIn: "7d" }
     );
 
-    res.redirect(
-      `${process.env.CLIENT_URL}/auth/callback?token=${token}`
-    );
+    res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
   },
 ];
-
-// ================= FORGOT PASSWORD =================
-exports.forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email });
-
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
-
-    const otp = generateOTP();
-
-    user.resetPasswordToken = otp;
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
-
-    await user.save();
-
-    await sendEmail(
-      email,
-      "Password Reset OTP",
-      `<h2>Password Reset Request</h2>
-       <h1>${otp}</h1>
-       <p>Expires in 10 minutes.</p>`
-    );
-
-    res.status(200).json({ message: "OTP sent to email" });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message || "Server error",
-    });
-  }
-};
-
-// ================= RESET PASSWORD =================
-exports.resetPassword = async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-
-    const user = await User.findOne({ email });
-
-    if (
-      !user ||
-      user.resetPasswordToken !== otp ||
-      user.resetPasswordExpires < Date.now()
-    ) {
-      return res.status(400).json({
-        message: "Invalid or expired OTP",
-      });
-    }
-
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-
-    await user.save();
-
-    res.status(200).json({
-      message: "Password reset successful",
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message || "Server error",
-    });
-  }
-};
-
-// ================= RESEND OTP =================
-exports.resendOTP = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const user = await User.findOne({ email });
-
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
-
-    const otp = generateOTP();
-
-    user.resetPasswordToken = otp;
-    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
-
-    await user.save();
-
-    await sendEmail(
-      email,
-      "Resend Password OTP",
-      `<h2>Your new OTP</h2><h1>${otp}</h1>`
-    );
-
-    res.status(200).json({
-      message: "OTP resent successfully",
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// ================= CHANGE PASSWORD =================
-exports.changePassword = async (req, res) => {
-  try {
-    const { oldPassword, newPassword } = req.body;
-
-    const user = await User.findById(req.user._id);
-
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
-
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Current password is incorrect",
-      });
-    }
-
-    user.password = await bcrypt.hash(newPassword, 10);
-
-    await user.save();
-
-    res.status(200).json({
-      message: "Password updated successfully",
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message || "Unable to update",
-    });
-  }
-};
-
-// ================= UPDATE PROFILE =================
-exports.updateProfile = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
-
-    if (req.body.name) user.name = req.body.name;
-    if (req.body.email) user.email = req.body.email;
-    if (req.body.phone) user.phone = req.body.phone;
-    if (req.file?.cloudinaryUrl)
-      user.profilePicture = req.file.cloudinaryUrl;
-
-    await user.save();
-
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message || "Server error",
-    });
-  }
-};

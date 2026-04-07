@@ -1,19 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const protect = require("../middlewares/authMiddleware");
-const upload = require("../middlewares/uploadMiddleware"); // streamifier version
+const upload = require("../middlewares/uploadMiddleware");
 
 const {
-  updateProfile,
   registerUser,
   loginUser,
-  googleCallback,
   googleAuth,
+  googleCallback,
   forgotPassword,
+  verifyOTP,           
   resetPassword,
   resendOTP,
-  deleteUserByEmail,
-  changePassword, // ✅ new controller
+  changePassword,
+  updateProfile,
 } = require("../controllers/userController");
 
 // ================= REGISTRATION & LOGIN =================
@@ -26,11 +26,12 @@ router.get("/google/callback", googleCallback);
 
 // ================= PASSWORD MANAGEMENT =================
 router.post("/forgot-password", forgotPassword);
-router.post("/resend-otp",  resendOTP);
-router.post("/reset-password",  resetPassword);
-router.post("/change-password", protect, changePassword); // ✅ new route
+router.post("/verify-otp", verifyOTP);           // ← NEW ROUTE
+router.post("/reset-password", resetPassword);
+router.post("/resend-otp", resendOTP);
+router.post("/change-password", protect, changePassword);
 
 // ================= PROFILE MANAGEMENT =================
-router.put("/profile", protect, upload, updateProfile); // <-- handles image upload
+router.put("/profile", protect, upload, updateProfile);
 
 module.exports = router;
