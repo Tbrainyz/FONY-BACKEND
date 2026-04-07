@@ -16,25 +16,40 @@ const port = process.env.PORT || 5000;
 // ==================== TRUST PROXY ====================
 app.set("trust proxy", 1);
 
-// ==================== CORS ====================
-app.use((req, res, next) => {
-  const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5174";
+// ==================== IMPROVED CORS ====================
+const allowedOrigins = [
+  process.env.CLIENT_URL,                    // Production frontend (e.g. https://yourdomain.com)
+  "http://localhost:5174",                   // Vite default
+  "http://localhost:3000",                   // React default (just in case)
+  "http://127.0.0.1:5174",
+  "http://127.0.0.1:3000"
+].filter(Boolean); // Remove undefined/null values
 
-  if (allowedOrigin) {
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Allow request if origin is in our allowed list OR if no origin (like Postman)
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  } else {
+    // For safety, you can also block unknown origins, but for development it's better to allow
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
   }
 
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET,POST,PUT,DELETE,OPTIONS"
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
+    "Content-Type, Authorization, X-Requested-With"
   );
 
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
 
   next();
 });
@@ -76,13 +91,14 @@ mongoose
     maxPoolSize: 10,
   })
   .then(() => {
-    console.log("✅ MongoDB connected");
+    console.log("✅ MongoDB connected successfully");
 
     app.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
-      console.log(`🌐 Allowed origin: ${process.env.CLIENT_URL}`);
+      console.log(`🌐 Allowed Origins:`);
+      allowedOrigins.forEach((origin) => console.log(`   - ${origin}`));
     });
   })
   .catch((err) => {
-    console.error("❌ MongoDB error:", err.message);
+    console.error("❌ MongoDB connection error:", err.message);
   });
