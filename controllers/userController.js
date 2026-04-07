@@ -91,20 +91,30 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// ================= VERIFY OTP (NEW) =================
+// VERIFY OTP
 exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email });
-
-    if (!user || user.resetPasswordToken !== otp || user.resetPasswordExpires < Date.now()) {
-      return res.status(400).json({ 
-        message: "Invalid or expired OTP" 
-      });
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
     }
 
-    // OTP is valid → Mark it as verified temporarily
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.resetPasswordToken !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.resetPasswordExpires < Date.now()) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+
+    // Mark as verified
     user.resetPasswordVerified = true;
     await user.save();
 
