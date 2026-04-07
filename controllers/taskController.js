@@ -80,15 +80,39 @@ exports.createTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const { title, description, priority, status } = req.body;
+
+    const updateData = {
+      title,
+      description,
+      priority,
+      status: Number(status) || 0,
+    };
+
+    // ✅ If a new image is uploaded, update it
+    if (req.file?.cloudinaryUrl) {
+      updateData.image = req.file.cloudinaryUrl;
+    }
+
     const updatedTask = await Task.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id }, // ✅ only update if owned by user
-      { title, description, priority, status: Number(status) },
+      { _id: req.params.id, user: req.user._id },
+      updateData,
       { new: true }
     );
-    if (!updatedTask) return res.status(404).json({ message: "Task not found" });
-    res.json({ message: "Task updated successfully", task: updatedTask });
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found or not owned by you" });
+    }
+
+    res.json({ 
+      message: "Task updated successfully", 
+      task: updatedTask 
+    });
   } catch (err) {
-    res.status(500).json({ message: "Error updating task", error: err.message });
+    console.error("Update Task Error:", err);
+    res.status(500).json({ 
+      message: "Error updating task", 
+      error: err.message 
+    });
   }
 };
 
