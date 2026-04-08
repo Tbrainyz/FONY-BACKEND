@@ -9,6 +9,7 @@ const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
 // ================= REGISTER =================
+// In your registerUser controller
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -25,17 +26,31 @@ exports.registerUser = async (req, res) => {
       phone,
       password: hashedPassword,
       isVerified: true,
+      // isBlocked: false   // make sure this field exists
+    });
+
+    // Generate token for auto-login
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { 
+      expiresIn: "7d" 
     });
 
     res.status(201).json({
       message: "User registered successfully",
-      user,
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role || "user",
+        isBlocked: user.isBlocked || false,
+        // add other fields you need
+      }
     });
   } catch (error) {
     res.status(500).json({ message: error.message || "Server error" });
   }
 };
-
 // ================= LOGIN =================
 exports.loginUser = async (req, res) => {
   try {
