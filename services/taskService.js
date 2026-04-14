@@ -64,6 +64,7 @@ exports.createTask = async (userId, body, file) => {
     title: body.title,
     description: body.description,
     priority: body.priority,
+    dueDate: body.dueDate, // 👈 ADD THIS
     user: userId,
   });
 
@@ -79,12 +80,14 @@ exports.createTask = async (userId, body, file) => {
 // UPDATE TASK
 // =========================
 exports.updateTask = async (userId, taskId, body, file) => {
-  const updateData = {
-    title: body.title,
-    description: body.description,
-    priority: body.priority,
-    status: Number(body.status) || 0,
-  };
+ const updateData = {
+  title: body.title,
+  description: body.description,
+  priority: body.priority,
+  status: Number(body.status) || 0,
+  dueDate: body.dueDate, 
+};
+
 
   if (file?.cloudinaryUrl) {
     updateData.image = file.cloudinaryUrl;
