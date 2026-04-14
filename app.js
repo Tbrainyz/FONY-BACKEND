@@ -1,5 +1,6 @@
 require("dotenv").config();
-
+require("./jobs/reminderJobs");
+  
 const express = require("express");
 const mongoose = require("mongoose");
 const passport = require("passport");
@@ -9,6 +10,7 @@ require("./config/passport");
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -54,6 +56,8 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
 // ==================== BODY PARSER ====================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -65,6 +69,7 @@ app.use(passport.initialize());
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // ==================== KEEP ALIVE ROUTE ====================
 app.get("/ping", (req, res) => {

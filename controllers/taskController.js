@@ -1,141 +1,115 @@
-const Task = require("../models/tasksModel");
+const taskService = require("../services/taskService");
 
-// GET all tasks (with pagination + optional filters)
+// =========================
+// GET TASKS
+// =========================
 exports.getTasks = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10;
-    const skip = (page - 1) * limit;
-
-    const priority = req.query.priority || "";
-    const status = req.query.status || null;
-
-    // ✅ Always scope to logged-in user
-    const filter = { user: req.user._id };
-    if (priority) filter.priority = priority;
-    if (status !== null) filter.status = Number(status);
-
-    const tasks = await Task.find(filter)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-
-    // ✅ Counts scoped to this user
-    const totalTasks = await Task.countDocuments({ user: req.user._id });
-    const completedCount = await Task.countDocuments({ user: req.user._id, status: 100 });
-    const ongoingCount = await Task.countDocuments({ user: req.user._id, status: { $lt: 100 } });
-
-    const totalFiltered = await Task.countDocuments(filter);
-    const totalPages = Math.ceil(totalFiltered / limit);
-
-    res.json({
-      data: tasks,
-      totalTasks,
-      completedCount,
-      ongoingCount,
-      page,
-      pages: totalPages,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-    });
+    const result = await taskService.getTasks(req.user._id, req.query);
+    res.json(result);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching tasks", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// GET completed tasks (for logged-in user)
+// =========================
+// GET COMPLETED TASKS
+// =========================
 exports.getCompletedTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ user: req.user._id, status: 100 }).sort({ createdAt: -1 });
+    const tasks = await taskService.getCompletedTasks(req.user._id);
     res.json(tasks);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching completed tasks", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// CREATE task
+// =========================
+// CREATE TASK
+// =========================
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, priority } = req.body;
-
-    const newTask = new Task({
-      title,
-      description,
-      priority,
-      user: req.user._id, // ✅ attach owner
-    });
-
-    if (req.file?.cloudinaryUrl) {
-      newTask.image = req.file.cloudinaryUrl;
-    }
-
-    await newTask.save();
-    res.status(201).json({ message: "Task created successfully", task: newTask });
-  } catch (error) {
-    res.status(500).json({ message: error.message || "Server error" });
-  }
-};
-
-// UPDATE task
-exports.updateTask = async (req, res) => {
-  try {
-    const { title, description, priority, status } = req.body;
-
-    const updateData = {
-      title,
-      description,
-      priority,
-      status: Number(status) || 0,
-    };
-
-    // ✅ If a new image is uploaded, update it
-    if (req.file?.cloudinaryUrl) {
-      updateData.image = req.file.cloudinaryUrl;
-    }
-
-    const updatedTask = await Task.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      updateData,
-      { new: true }
+    const task = await taskService.createTask(
+      req.user._id,
+      req.body,
+      req.file
     );
 
-    if (!updatedTask) {
-      return res.status(404).json({ message: "Task not found or not owned by you" });
+    res.status(201).json({
+      message: "Task created successfully",
+      task,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// =========================
+// UPDATE TASK
+// =========================
+exports.updateTask = async (req, res) => {
+  try {
+    const task = await taskService.updateTask(
+      req.user._id,
+      req.params.id,
+      req.body,
+      req.file
+    );
+
+    if (!task) {
+      return res.status(404).json({
+        message: "Task not found or not owned by you",
+      });
     }
 
-    res.json({ 
-      message: "Task updated successfully", 
-      task: updatedTask 
+    res.json({
+      message: "Task updated successfully",
+      task,
     });
   } catch (err) {
-    console.error("Update Task Error:", err);
-    res.status(500).json({ 
-      message: "Error updating task", 
-      error: err.message 
-    });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// MARK task as completed
+// =========================
+// COMPLETE TASK
+// =========================
 exports.completeTask = async (req, res) => {
   try {
-    const task = await Task.findOne({ _id: req.params.id, user: req.user._id });
-    if (!task) return res.status(404).json({ message: "Task not found" });
-    task.status = 100;
-    await task.save();
-    res.json({ message: "Task marked as completed", task });
+    const task = await taskService.completeTask(
+      req.user._id,
+      req.params.id
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.json({
+      message: "Task completed successfully",
+      task,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Error completing task", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// DELETE task
+// =========================
+// DELETE TASK
+// =========================
 exports.deleteTask = async (req, res) => {
   try {
-    const deletedTask = await Task.findOneAndDelete({ _id: req.params.id, user: req.user._id });
-    if (!deletedTask) return res.status(404).json({ message: "Task not found" });
+    const task = await taskService.deleteTask(
+      req.user._id,
+      req.params.id
+    );
+
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
     res.json({ message: "Task deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Error deleting task", error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
