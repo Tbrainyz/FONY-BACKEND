@@ -3,14 +3,14 @@ const Task = require("../models/tasksModel");
 const notificationService = require("../services/notificationService");
 
 // Runs every 10 minutes
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
 
     const tasks = await Task.find({
-      completed: false,
+      status: { $lt: 100 },
       dueDate: { $lte: now },
-      reminded: false,
+      reminderSent: false,
     });
 
     for (const task of tasks) {
@@ -20,12 +20,13 @@ cron.schedule("*/10 * * * *", async () => {
         `⏰ Reminder: "${task.title}" is due or overdue`
       );
 
-      task.reminded = true;
+      task.reminderSent = true;
       await task.save();
     }
 
-    console.log("🔔 Reminder job executed");
+    console.log("🔔 Reminder job executed", tasks.length);
   } catch (err) {
     console.error("Reminder job error:", err.message);
   }
 });
+
