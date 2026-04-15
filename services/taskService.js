@@ -81,26 +81,39 @@ exports.createTask = async (userId, body, file) => {
 // =========================
 // UPDATE TASK
 // =========================
+const Notification = require("../models/notificationModel");
+
 exports.updateTask = async (userId, taskId, body, file) => {
   const updateData = {
     title: body.title,
     description: body.description,
     priority: body.priority,
     status: Number(body.status) || 0,
-    dueDate: body.dueDate || null,
-    reminderSent: false,
+    dueDate: body.dueDate,
   };
 
   if (file?.cloudinaryUrl) {
     updateData.image = file.cloudinaryUrl;
   }
 
-  return await Task.findOneAndUpdate(
+  const updatedTask = await Task.findOneAndUpdate(
     { _id: taskId, user: userId },
     updateData,
     { new: true }
   );
+
+  // 🔥 RESET REMINDER SYSTEM
+  if (body.dueDate) {
+    updatedTask.reminderSent = false;
+    await updatedTask.save();
+
+    // ❌ REMOVE OLD NOTIFICATIONS
+    await Notification.deleteMany({ task: taskId });
+  }
+
+  return updatedTask;
 };
+
 
 
 // =========================
