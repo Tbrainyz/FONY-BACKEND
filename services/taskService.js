@@ -7,7 +7,7 @@ exports.getTasks = async (userId, query) => {
   const page = parseInt(query.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
-
+  const Notification = require("../models/notificationModel");
   const priority = query.priority || "";
   const status = query.status;
 
@@ -77,11 +77,9 @@ exports.createTask = async (userId, body, file) => {
   return newTask;
 };
 
-
 // =========================
 // UPDATE TASK
 // =========================
-const Notification = require("../models/notificationModel");
 
 exports.updateTask = async (userId, taskId, body, file) => {
   const updateData = {
@@ -99,7 +97,7 @@ exports.updateTask = async (userId, taskId, body, file) => {
   const updatedTask = await Task.findOneAndUpdate(
     { _id: taskId, user: userId },
     updateData,
-    { new: true }
+    { new: true },
   );
 
   // 🔥 RESET REMINDER SYSTEM
@@ -113,8 +111,6 @@ exports.updateTask = async (userId, taskId, body, file) => {
 
   return updatedTask;
 };
-
-
 
 // =========================
 // COMPLETE TASK
@@ -135,7 +131,6 @@ exports.completeTask = async (userId, taskId) => {
 // =========================
 // DELETE TASK
 // =========================
-const Notification = require("../models/notificationModel");
 
 exports.deleteTask = async (userId, taskId) => {
   const task = await Task.findOneAndDelete({
