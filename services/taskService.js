@@ -64,8 +64,8 @@ exports.createTask = async (userId, body, file) => {
     title: body.title,
     description: body.description,
     priority: body.priority,
-    dueDate: body.dueDate || null, // ✅ safe
-    reminderSent: false, // ✅ IMPORTANT
+    dueDate: body.dueDate || null, //
+    reminderSent: false, //
     user: userId,
   });
 
@@ -88,7 +88,7 @@ exports.updateTask = async (userId, taskId, body, file) => {
     priority: body.priority,
     status: Number(body.status) || 0,
     dueDate: body.dueDate || null,
-    reminderSent: false, // 🔥 RESET so cron can re-trigger
+    reminderSent: false,
   };
 
   if (file?.cloudinaryUrl) {
