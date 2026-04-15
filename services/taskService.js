@@ -64,7 +64,8 @@ exports.createTask = async (userId, body, file) => {
     title: body.title,
     description: body.description,
     priority: body.priority,
-    dueDate: body.dueDate, // 👈 ADD THIS
+    dueDate: body.dueDate || null, // ✅ safe
+    reminderSent: false, // ✅ IMPORTANT
     user: userId,
   });
 
@@ -76,18 +77,19 @@ exports.createTask = async (userId, body, file) => {
   return newTask;
 };
 
+
 // =========================
 // UPDATE TASK
 // =========================
 exports.updateTask = async (userId, taskId, body, file) => {
- const updateData = {
-  title: body.title,
-  description: body.description,
-  priority: body.priority,
-  status: Number(body.status) || 0,
-  dueDate: body.dueDate, 
-};
-
+  const updateData = {
+    title: body.title,
+    description: body.description,
+    priority: body.priority,
+    status: Number(body.status) || 0,
+    dueDate: body.dueDate || null,
+    reminderSent: false, // 🔥 RESET so cron can re-trigger
+  };
 
   if (file?.cloudinaryUrl) {
     updateData.image = file.cloudinaryUrl;
@@ -99,6 +101,7 @@ exports.updateTask = async (userId, taskId, body, file) => {
     { new: true }
   );
 };
+
 
 // =========================
 // COMPLETE TASK
@@ -119,9 +122,18 @@ exports.completeTask = async (userId, taskId) => {
 // =========================
 // DELETE TASK
 // =========================
+const Notification = require("../models/notificationModel");
+
 exports.deleteTask = async (userId, taskId) => {
-  return await Task.findOneAndDelete({
+  const task = await Task.findOneAndDelete({
     _id: taskId,
     user: userId,
   });
+
+  // ✅ CLEAN UP NOTIFICATIONS
+  if (task) {
+    await Notification.deleteMany({ task: taskId });
+  }
+
+  return task;
 };
