@@ -1,5 +1,5 @@
 require("dotenv").config();
-require("./jobs/reminderJobs");
+
   
 const express = require("express");
 const mongoose = require("mongoose");
@@ -97,6 +97,8 @@ mongoose
   })
   .then(() => {
     console.log("✅ MongoDB connected successfully");
+
+    require("./jobs/reminderJobs");
 
     app.listen(port, () => {
       console.log(`🚀 Server running on port ${port}`);
