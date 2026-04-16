@@ -6,12 +6,20 @@ const protect = require("../middlewares/authMiddleware");
 const {
   getNotifications,
   markAsRead,
+  deleteNotification,
+  clearAllNotifications,
 } = require("../controllers/notificationController");
 
-// Get all notifications
+// ================= GET ALL =================
 router.get("/", protect, getNotifications);
 
-// Mark notification as read
+// ================= MARK AS READ =================
 router.put("/:id/read", protect, markAsRead);
+
+// ================= DELETE ONE =================
+router.delete("/:id", protect, deleteNotification);
+
+// ================= CLEAR ALL =================
+router.delete("/", protect, clearAllNotifications);
 
 module.exports = router;
