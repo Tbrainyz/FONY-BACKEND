@@ -80,29 +80,49 @@ exports.createTask = async (userId, body, file) => {
 // =========================
 // UPDATE TASK
 // =========================
- const Notification = require("../models/notificationModel");
+const Notification = require("../models/notificationModel");
+
 exports.updateTask = async (userId, taskId, body, file) => {
-const updatedTask = await Task.findOneAndUpdate(
-  { _id: taskId, user: userId },
-  updateData,
-  { new: true }
-);
+  try {
+    const updateData = {
+      title: body.title,
+      description: body.description,
+      priority: body.priority,
+      status: Number(body.status) || 0,
+      dueDate: body.dueDate || null,
+    };
 
-if (!updatedTask) {
-  throw new Error("Task not found");
-}
+    if (file?.cloudinaryUrl) {
+      updateData.image = file.cloudinaryUrl;
+    }
 
-// reset reminder if dueDate changed
-if (body.dueDate) {
-  updatedTask.reminderSent = false;
-  await updatedTask.save();
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: taskId, user: userId },
+      updateData,
+      { new: true }
+    );
 
-  await Notification.deleteMany({ task: taskId });
-}
+    // 🔴 CRASH GUARD
+    if (!updatedTask) {
+      throw new Error("Task not found or unauthorized");
+    }
 
-return updatedTask;
+    // 🔥 RESET REMINDER + DELETE OLD NOTIFICATIONS
+    if (body.dueDate) {
+      updatedTask.reminderSent = false;
+      await updatedTask.save();
 
+      await Notification.deleteMany({ task: taskId });
+    }
+
+    return updatedTask;
+
+  } catch (error) {
+    console.error("🔥 UPDATE TASK ERROR:", error.message);
+    throw error;
+  }
 };
+
 
 // =========================
 // COMPLETE TASK
